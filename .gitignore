@@ -1,3 +1,5 @@
 .conda
 test.*
 __pycache__
+dist
+build

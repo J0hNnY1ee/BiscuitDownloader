@@ -1,7 +1,6 @@
 import requests , re , json
 
 
-
 def get_html(url):
     try:
         response = requests.get(url)
