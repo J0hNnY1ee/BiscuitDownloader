@@ -1,3 +1,13 @@
+'''
+Author: J0hNnY1ee joh1eenny@gmail.com
+Date: 2025-01-07 15:25:26
+LastEditors: J0hNnY1ee joh1eenny@gmail.com
+LastEditTime: 2025-01-09 17:00:24
+FilePath: /BiscuitDownloader/util.py
+Description: 
+
+Copyright (c) 2025 by J0hNnY1ee joh1eenny@gmail.com, All Rights Reserved. 
+'''
 import requests , re , json
 
 
@@ -52,8 +62,6 @@ def extract_data_from_html(content):
         print(f"The play url in detail is: {play_url}")
     except AttributeError:
         print("The structure of the data does not match or data is None.")
-    
-    
     return nick_value, song_name, play_url
     
     
