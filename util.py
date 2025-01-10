@@ -9,7 +9,7 @@ Description:
 Copyright (c) 2025 by J0hNnY1ee joh1eenny@gmail.com, All Rights Reserved. 
 """
 
-import requests, re, json, os, html
+import requests, re, json, os, html, sys
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, parse_qs
 
@@ -35,7 +35,7 @@ def get_html(url, cookie=""):
 
         return response.text
     except requests.RequestException as e:
-        print(e)
+        print(e, file=sys.stderr)
         return False
 
 
@@ -50,14 +50,14 @@ def download(filename, url):
                 file.write(chunk)
         print(f"文件已成功下载并保存到 {filename}")
     except requests.exceptions.RequestException as e:
-        print(f"文件下载失败: {e}")
+        print(f"文件下载失败: {e}", file=sys.stderr)
 
 
 def extract_data_from_html(content):
     # 使用正则表达式查找window.__DATA__中的内容
     match = match = re.search(r"window.__DATA__\s*=\s*({.*?});", content, re.DOTALL)
     if not match:
-        print("未能找到window.__DATA__对象")
+        print("未能找到window.__DATA__对象", file=sys.stderr)
         return None
 
     data_str = match.group(1)
@@ -73,11 +73,13 @@ def extract_data_from_html(content):
         song_name = data.get("detail", {}).get("song_name", "Song name not found")
         play_url = data.get("detail", {}).get("playurl", "Play url not found")
 
-        print(f"The nick value in detail is: {nick_value}")
-        print(f"The song name in detail is: {song_name}")
-        print(f"The play url in detail is: {play_url}")
+        print(f"The nick value in detail is: {nick_value}", file=sys.stderr)
+        print(f"The song name in detail is: {song_name}", file=sys.stderr)
+        print(f"The play url in detail is: {play_url}", file=sys.stderr)
     except AttributeError:
-        print("The structure of the data does not match or data is None.")
+        print(
+            "The structure of the data does not match or data is None.", file=sys.stderr
+        )
     return nick_value, song_name, play_url
 
 
@@ -134,12 +136,14 @@ def getSongs(uid, cookie=""):
                                 songList += song_information["ugclist"]
                                 n += 1
                             else:
-                                print("响应文本中找不到有效的 JSON 格式")
+                                print(
+                                    "响应文本中找不到有效的 JSON 格式", file=sys.stderr
+                                )
                         except json.JSONDecodeError as e:
-                            print(f"JSON 解析错误: {e}")
+                            print(f"JSON 解析错误: {e}", file=sys.stderr)
                 break
         else:
-            print("未发现歌曲！")
+            print("未发现歌曲！", file=sys.stderr)
         # open(
         #     f'{user_information["kgnick"]}/{user_information["kgnick"]}_{uid}.json',
         #     "w",
@@ -148,7 +152,7 @@ def getSongs(uid, cookie=""):
     return songList
 
 
-def downloadSongs(songList, cookie=""):
+def downloadList(songList, cookie=""):
     for _, song in enumerate(songList):
         content = get_html(
             f"https://node.kg.qq.com/play?s={song['shareid']}", cookie=cookie
@@ -157,8 +161,23 @@ def downloadSongs(songList, cookie=""):
         if content:
             nick_name, song_name, play_url = extract_data_from_html(content)
         else:
-            print("未能成功获取HTML内容")
+            print("未能成功获取HTML内容", file=sys.stderr)
         download(f"downloads/{nick_name}/{nick_name}-{song_name}.m4a", play_url)
+
+
+def downloadSong(url):
+    html_content = get_html(url)
+    nick_name, song_name, play_url = "", "", ""
+    if html_content:
+        nick_name, song_name, play_url = extract_data_from_html(html_content)
+    else:
+        print("未能成功获取HTML内容")
+    download(f"{nick_name}-{song_name}.m4a", play_url)
+
+
+def downloadPeople(url):
+    uid = getuid(url)
+    downloadList(getSongs(uid))
 
 
 def getuid(url):
@@ -171,7 +190,6 @@ def getuid(url):
     uid = query_params.get("uid", [None])[0]
 
     return uid
-
 
 
 if __name__ == "__main__":
