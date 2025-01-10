@@ -1,5 +1,8 @@
 .conda
 test.*
+test
 __pycache__
 dist
 build
+
+downloads
