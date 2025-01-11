@@ -1,6 +1,7 @@
 use html_escape::decode_html_entities;
 use regex::Regex;
 use reqwest::blocking::Client;
+use reqwest::Url;
 use scraper::{Html, Selector};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -290,11 +291,27 @@ fn download_list(
 
     Ok(())
 }
-fn main() -> Result<(), Box<dyn Error>> {
-    let uid = "";
-    let cookie = Some("session=abc123");
 
-    let songs = get_songs(uid, "")?;
+fn get_uid(url: &str) -> Option<String> {
+    // 解析 URL
+    if let Ok(parsed_url) = Url::parse(url) {
+        // 获取查询参数
+        let query_params = parsed_url.query_pairs();
+        // 查找 `uid` 参数并返回其值
+        for (key, value) in query_params {
+            if key == "uid" {
+                return Some(value.to_string());
+            }
+        }
+    }
+    None
+}
+fn main() -> Result<(), Box<dyn Error>> {
+    let url = "https://static-play.kg.qq.com/node/personal_v2?uid=xxxxxxxx";
+    let uid = get_uid(url).unwrap();
+    let cookie = Some("");
+
+    let songs = get_songs(&uid, "")?;
 
     download_list(&songs, cookie)?;
     Ok(())
