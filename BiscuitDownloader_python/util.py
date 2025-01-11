@@ -144,11 +144,6 @@ def getSongs(uid, cookie=""):
                 break
         else:
             print("未发现歌曲！", file=sys.stderr)
-        # open(
-        #     f'{user_information["kgnick"]}/{user_information["kgnick"]}_{uid}.json',
-        #     "w",
-        #     encoding="utf-8",
-        # ).write(json.dumps(songList, indent=4, ensure_ascii=False))
     return songList
 
 
