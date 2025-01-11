@@ -188,5 +188,5 @@ def getuid(url):
 
 
 if __name__ == "__main__":
-    url = "https://static-play.kg.qq.com/node/personal_v2?uid=6a9a9c84272e348d&shareUid=6799998d2c2b368f&pageId=homepage_guest"
-    print(getuid(url))
+    encoded_str = "&lt;p&gt;Hello, world!&lt;/p&gt;";
+    print(decode_html_entities(encoded_str))
