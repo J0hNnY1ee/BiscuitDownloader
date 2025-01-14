@@ -10,18 +10,17 @@ use std::error::Error;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::Path;
-use tauri::{AppHandle, Emitter, Window};
+use tauri::{AppHandle, Emitter};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![])
+        .invoke_handler(tauri::generate_handler![download_all_songs, download_single_song])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-
 
 /// Fetch HTML content from a given URL with optional cookie
 pub fn get_html(url: &str, cookie: Option<&str>) -> Result<String, String> {
@@ -337,114 +336,26 @@ fn download_song(url: &str, cookie: Option<&str>) -> Result<(), Box<dyn Error>> 
     Ok(())
 }
 
-// #[tauri::command]
-// fn download_for_front(url: String, cookie: Option<String>) -> Result<(), String> {
-//     // 创建一个新线程处理下载任务
-//     std::thread::spawn(move || {
-//         match get_uid(&url) {
-//             Some(uid) => {
-//                 println!("Found UID: {}", uid);
-
-//                 if let Err(e) = download_people2(&url, cookie.as_deref()) {
-//                     eprintln!("Error downloading people: {}", e);
-//                 } else {
-//                     println!("Download people task completed.");
-//                 }
-//             }
-//             None => {
-//                 println!("No UID found, falling back to download_song.");
-
-//                 if let Err(e) = download_song(&url, cookie.as_deref()) {
-//                     eprintln!("Error downloading song: {}", e);
-//                 } else {
-//                     println!("Download song task completed.");
-//                 }
-//             }
-//         }
-//     });
-
-//     // 立即返回前端，通知任务已启动
-//     Ok(())
-// }
-
-// #[tauri::command]
-// fn download_for_front(app:AppHandle,url: String, cookie: Option<String>) -> Result<(), String> {
-//     // 创建一个新线程处理下载任务
-//     std::thread::spawn(move || {
-//         match get_uid(&url) {
-//             Some(uid) => {
-//                 println!("Found UID: {}", uid);
-
-//                 // 获取歌曲列表
-//                 let songs = match get_songs(&uid, cookie.as_deref()) {
-//                     Ok(songs) => songs,
-//                     Err(e) => {
-//                         eprintln!("Failed to get songs: {}", e);
-//                         return;
-//                     }
-//                 };
-
-//                 // 遍历歌曲列表并下载
-//                 for song in songs.iter() {
-//                     // 提取 shareid
-//                     let shareid = match song.get("shareid").and_then(|v| v.as_str()) {
-//                         Some(id) => id,
-//                         None => {
-//                             eprintln!("Missing 'shareid' in song: {:?}", song);
-//                             continue;
-//                         }
-//                     };
-
-//                     // 构建 URL
-//                     let url = format!("https://node.kg.qq.com/play?s={}", shareid);
-
-//                     // 获取 HTML 内容
-//                     let content = match get_html(&url, cookie.as_deref()) {
-//                         Ok(content) => content,
-//                         Err(e) => {
-//                             eprintln!("Failed to get HTML content: {}", e);
-//                             continue;
-//                         }
-//                     };
-
-//                     // 提取歌曲信息
-//                     let (nick_name, song_name, play_url) = match extract_data_from_html(&content) {
-//                         Ok(data) => data,
-//                         Err(e) => {
-//                             eprintln!("Failed to extract song data: {}", e);
-//                             continue;
-//                         }
-//                     };
-
-//                     // 构建文件保存路径
-//                     let file_path = format!("downloads/{}/{}-{}.m4a", nick_name, nick_name, song_name);
-
-//                     // 下载歌曲
-//                     if let Err(err) = download(&file_path, &play_url) {
-//                         eprintln!("Failed to download song '{}': {}", song_name, err);
-//                     }
-//                 }
-
-//                 println!("Download people task completed.");
-//             }
-//             None => {
-//                 println!("No UID found, falling back to download_song.");
-
-//                 if let Err(e) = download_song(&url, cookie.as_deref()) {
-//                     eprintln!("Error downloading song: {}", e);
-//                 } else {
-//                     println!("Download song task completed.");
-//                 }
-//             }
-//         }
-//     });
-
-//     // 立即返回前端，通知任务已启动
-//     Ok(())
-// }
 
 #[tauri::command]
-fn download_for_front(app: AppHandle, url: String, cookie: Option<String>) -> Result<(), String> {
+fn download_single_song(app: AppHandle, url: String, cookie: Option<String>) -> Result<(), String> {
+    std::thread::spawn(move || {
+        app.emit("download-started", ()).unwrap();
+        app.emit("download_index", 0).unwrap();
+        app.emit("total_count", 1).unwrap();
+        if let Err(e) = download_song(&url, cookie.as_deref()) {
+            eprintln!("Error downloading song: {}", e);
+            app.emit("download_index", 1).unwrap();
+        } else {
+            println!("Download song task completed.");
+            app.emit("download_success", ()).unwrap();
+        }
+    });
+    Ok(())
+}
+
+#[tauri::command]
+fn download_all_songs(app: AppHandle, url: String, cookie: Option<String>) -> Result<(), String> {
     // 创建一个新线程处理下载任务
     std::thread::spawn(move || {
         match get_uid(&url) {
@@ -460,6 +371,7 @@ fn download_for_front(app: AppHandle, url: String, cookie: Option<String>) -> Re
                     }
                 };
                 app.emit("download-started", ()).unwrap();
+                app.emit("download_index", 0).unwrap();
                 app.emit("total_count", songs.len()).unwrap();
                 // 遍历歌曲列表并下载
                 for (index, song) in songs.iter().enumerate() {
@@ -501,22 +413,13 @@ fn download_for_front(app: AppHandle, url: String, cookie: Option<String>) -> Re
                     if let Err(err) = download(&file_path, &play_url) {
                         eprintln!("Failed to download song '{}': {}", song_name, err);
                     }
-                    app.emit("download_index", index).unwrap();
+                    app.emit("download_index", index + 1).unwrap();
                 }
                 app.emit("download_success", ()).unwrap();
                 println!("Download people task completed.");
             }
             None => {
                 println!("No UID found, falling back to download_song.");
-                app.emit("download-started", ()).unwrap();
-                app.emit("total_count", 1).unwrap();
-                if let Err(e) = download_song(&url, cookie.as_deref()) {
-                    eprintln!("Error downloading song: {}", e);
-                    app.emit("download_index", 1).unwrap();
-                } else {
-                    println!("Download song task completed.");
-                    app.emit("download_success", ()).unwrap();
-                }
             }
         }
     });

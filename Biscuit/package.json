@@ -15,6 +15,8 @@
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-shell": "~2",
+    "@tsparticles/slim": "^3.7.1",
+    "@tsparticles/vue3": "^3.0.1",
     "@vueuse/core": "^12.4.0",
     "element-plus": "^2.9.3",
     "vue": "^3.5.13"
