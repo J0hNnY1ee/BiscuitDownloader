@@ -4,6 +4,10 @@ import 'element-plus/dist/index.css'; // 引入样式
 import App from './App.vue';
 import Particles from "@tsparticles/vue3";
 import { loadSlim } from "@tsparticles/slim";
+
+
+
+
 const app = createApp(App);
 
 // 按需注册组件
@@ -18,4 +22,8 @@ app.use(Particles, {
       await loadSlim(engine); // or you can load the slim version from "@tsparticles/slim" if don't need Shapes or Animations
     },
   });
+
+
+
 app.mount('#app');
+

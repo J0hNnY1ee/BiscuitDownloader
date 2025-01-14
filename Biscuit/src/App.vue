@@ -1,20 +1,42 @@
 <script setup lang="ts">
-import TopRightButtons from "./TopRightButtons.vue"; // 引入右上角按钮组件
-import TitleWithLogo from "./TitleWithLogo.vue"; // 引入标题和 Logo 组件
-import DownloadCards from "./DownloadCards.vue"; // 引入下载卡片组件
+import { ref } from 'vue';
+import TopRightButtons from "./TopRightButtons.vue";
+import TitleWithLogo from "./TitleWithLogo.vue";
+import DownloadCards from "./DownloadCards.vue";
+import SprinkleFlowers from './SprinkleFlowers.vue';
+import { listen } from "@tauri-apps/api/event";
+
+const showSprinkleFlowers = ref(false);
+
 const particlesLoaded = (container: any) => {
   console.log("Particles container loaded", container);
 };
+
+// 模拟一个事件监听函数
+const listenToEvent = () => {
+  showSprinkleFlowers.value = true; // 显示 SprinkleFlowers
+
+  // 1 秒后开始淡出
+  setTimeout(() => {
+    showSprinkleFlowers.value = false; // 触发淡出效果
+  }, 1000);
+};
+
+
+listen("download_success", () => {
+  listenToEvent();
+});
 </script>
 
 <template>
-  <div id="app">
-    <vue-particles
-      id="tsparticles"
-      @particles-loaded="particlesLoaded"
-      url="http://foo.bar/particles.json"
-    />
+  <div>
+    <!-- 使用 v-show 和过渡效果 -->
+    <transition name="fade">
+      <SprinkleFlowers v-show="showSprinkleFlowers"></SprinkleFlowers>
+    </transition>
+  </div>
 
+  <div id="app">
     <vue-particles
       id="tsparticles"
       @particles-loaded="particlesLoaded"
@@ -28,7 +50,7 @@ const particlesLoaded = (container: any) => {
         interactivity: {
           events: {
             onClick: {
-              enable: true,
+              enable: false,
               mode: 'push',
             },
             onHover: {
@@ -44,7 +66,7 @@ const particlesLoaded = (container: any) => {
               size: 40,
             },
             push: {
-              quantity: 4,
+              quantity: 2,
             },
             repulse: {
               distance: 150,
@@ -75,7 +97,8 @@ const particlesLoaded = (container: any) => {
             density: {
               enable: true,
             },
-            value: 200,
+            value: 300,
+            limit: 200,
           },
           opacity: {
             value: 0.5,
@@ -91,17 +114,11 @@ const particlesLoaded = (container: any) => {
       }"
     />
   </div>
+
   <main class="container">
-    <!-- 右上角按钮区域 -->
     <TopRightButtons />
-
-    <!-- 标题和 Logo -->
     <TitleWithLogo />
-
-    <!-- 下载卡片组件 -->
     <DownloadCards />
-
-    <!-- 底部信息栏 -->
     <footer class="footer">
       <p>© 2025 J0hNnY1ee. All rights reserved.</p>
     </footer>
@@ -110,27 +127,36 @@ const particlesLoaded = (container: any) => {
 
 <style scoped>
 #tsparticles {
-  position: fixed; /* 固定定位 */
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: -1; /* 将粒子效果置于页面内容之后 */
+  z-index: -1;
 }
 
-/* 底部信息栏 */
 .footer {
   margin-top: 40px;
   padding: 20px;
   text-align: center;
   font-size: 14px;
   color: var(--card-text-color);
-  opacity: 0.8; /* 降低透明度 */
+  opacity: 0.8;
+}
+
+/* 淡入淡出过渡效果 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.5s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>
 
 <style>
-/* 引入 Google Fonts */
 @import url("https://fonts.googleapis.com/css2?family=Pacifico&display=swap");
 
 :root {
@@ -143,14 +169,14 @@ const particlesLoaded = (container: any) => {
   --card-text-color: #0f0f0f;
   --input-bg-color: #ffffff;
   --input-text-color: #0f0f0f;
-  --button-bg-color: #a78bfa; /* 浅紫色 */
-  --button-text-color: #ffffff; /* 按钮文字颜色 */
-  --button-border-color: #8b5cf6; /* 浅紫色边框 */
-  --button-hover-bg-color: #8b5cf6; /* 悬停时稍深的紫色 */
-  --button-hover-border-color: #7c3aed; /* 悬停时稍深的紫色边框 */
+  --button-bg-color: #a78bfa;
+  --button-text-color: #ffffff;
+  --button-border-color: #8b5cf6;
+  --button-hover-bg-color: #8b5cf6;
+  --button-hover-border-color: #7c3aed;
 
   color: #0f0f0f;
-  background: linear-gradient(135deg, #f6f6f6, #e0e0e0); /* 浅色背景渐变 */
+  background: linear-gradient(135deg, #f6f6f6, #e0e0e0);
 }
 
 .dark {
@@ -158,13 +184,13 @@ const particlesLoaded = (container: any) => {
   --card-text-color: #f6f6f6;
   --input-bg-color: #1e1e1e;
   --input-text-color: #f6f6f6;
-  --button-bg-color: #7c3aed; /* 深色主题下的浅紫色 */
-  --button-text-color: #ffffff; /* 按钮文字颜色 */
-  --button-border-color: #6d28d9; /* 深色主题下的浅紫色边框 */
-  --button-hover-bg-color: #6d28d9; /* 悬停时稍深的紫色 */
-  --button-hover-border-color: #5b21b6; /* 悬停时稍深的紫色边框 */
+  --button-bg-color: #7c3aed;
+  --button-text-color: #ffffff;
+  --button-border-color: #6d28d9;
+  --button-hover-bg-color: #6d28d9;
+  --button-hover-border-color: #5b21b6;
 
   color: #f6f6f6;
-  background: linear-gradient(135deg, #2f2f2f, #1e1e1e); /* 深色背景渐变 */
+  background: linear-gradient(135deg, #2f2f2f, #1e1e1e);
 }
 </style>

@@ -218,7 +218,7 @@ listen("total_count", (event: { payload: number }) => {
   border-radius: 8px;
   cursor: pointer;
   transition: background-color 0.3s, color 0.3s, box-shadow 0.3s, border-color 0.3s;
-  margin-top: 10px;
+  margin-top: 20px; /* 增加 margin-top 的值，使按钮距离滑块更远 */
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* 阴影效果 */
 }
 

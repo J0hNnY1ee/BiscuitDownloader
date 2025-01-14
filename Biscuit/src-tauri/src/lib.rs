@@ -275,6 +275,31 @@ fn get_uid(url: &str) -> Option<String> {
     }
     None
 }
+fn sanitize_windows_filename(filename: &str) -> String {
+    // 定义 Windows 文件名中的非法字符
+    const ILLEGAL_CHARS: [char; 9] = ['\\', '/', ':', '*', '?', '"', '<', '>', '|'];
+
+    // 替换非法字符为 '-'
+    let sanitized = filename
+        .chars()
+        .map(|c| if ILLEGAL_CHARS.contains(&c) { '-' } else { c })
+        .collect::<String>();
+
+    // 去除文件名末尾的空格和句点
+    let sanitized = sanitized.trim_end_matches(|c: char| c == ' ' || c == '.');
+
+    // 限制文件名长度（Windows 路径最大长度为 260 字符）
+    const MAX_FILENAME_LENGTH: usize = 255; // 预留空间给路径
+    let sanitized = if sanitized.len() > MAX_FILENAME_LENGTH {
+        let mut truncated = sanitized.chars().take(MAX_FILENAME_LENGTH).collect::<String>();
+        // 确保截断后的文件名不以空格或句点结尾
+        truncated.trim_end_matches(|c: char| c == ' ' || c == '.').to_string()
+    } else {
+        sanitized.to_string()
+    };
+
+    sanitized
+}
 
 
 
@@ -302,18 +327,26 @@ fn download_song(url: &str, cookie: Option<&str>) -> Result<(), Box<dyn Error>> 
 
 #[tauri::command]
 fn download_single_song(app: AppHandle, url: String, cookie: Option<String>) -> Result<(), String> {
+    // 检查 URL 格式是否正确
+    if Url::parse(&url).is_err() {
+        return Err("Invalid URL format".to_string());
+    }
+
     std::thread::spawn(move || {
         app.emit("download-started", ()).unwrap();
         app.emit("download_index", 0).unwrap();
         app.emit("total_count", 1).unwrap();
+
         if let Err(e) = download_song(&url, cookie.as_deref()) {
             eprintln!("Error downloading song: {}", e);
+            app.emit("download_failed", e.to_string()).unwrap();
         } else {
             println!("Download song task completed.");
             app.emit("download_index", 1).unwrap();
             app.emit("download_success", ()).unwrap();
         }
     });
+
     Ok(())
 }
 
@@ -321,32 +354,6 @@ fn download_single_song(app: AppHandle, url: String, cookie: Option<String>) -> 
 
 
 
-
-fn sanitize_windows_filename(filename: &str) -> String {
-    // 定义 Windows 文件名中的非法字符
-    const ILLEGAL_CHARS: [char; 9] = ['\\', '/', ':', '*', '?', '"', '<', '>', '|'];
-
-    // 替换非法字符为 '-'
-    let sanitized = filename
-        .chars()
-        .map(|c| if ILLEGAL_CHARS.contains(&c) { '-' } else { c })
-        .collect::<String>();
-
-    // 去除文件名末尾的空格和句点
-    let sanitized = sanitized.trim_end_matches(|c: char| c == ' ' || c == '.');
-
-    // 限制文件名长度（Windows 路径最大长度为 260 字符）
-    const MAX_FILENAME_LENGTH: usize = 255; // 预留空间给路径
-    let sanitized = if sanitized.len() > MAX_FILENAME_LENGTH {
-        let mut truncated = sanitized.chars().take(MAX_FILENAME_LENGTH).collect::<String>();
-        // 确保截断后的文件名不以空格或句点结尾
-        truncated.trim_end_matches(|c: char| c == ' ' || c == '.').to_string()
-    } else {
-        sanitized.to_string()
-    };
-
-    sanitized
-}
 
 
 #[tauri::command]
