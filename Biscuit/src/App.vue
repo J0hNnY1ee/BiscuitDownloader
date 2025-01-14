@@ -2,6 +2,9 @@
 import TopRightButtons from "./TopRightButtons.vue"; // 引入右上角按钮组件
 import TitleWithLogo from "./TitleWithLogo.vue"; // 引入标题和 Logo 组件
 import DownloadCards from "./DownloadCards.vue"; // 引入下载卡片组件
+const particlesLoaded = (container: any) => {
+  console.log("Particles container loaded", container);
+};
 </script>
 
 <template>

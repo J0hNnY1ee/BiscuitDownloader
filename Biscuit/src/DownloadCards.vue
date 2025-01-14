@@ -4,11 +4,7 @@
     <!-- 输入链接卡片 -->
     <div class="card">
       <h3>Enter Download Link</h3>
-      <input
-        v-model="downloadLink"
-        placeholder="Enter download link"
-        class="input-box"
-      />
+      <input v-model="downloadLink" placeholder="Enter download link" class="input-box" />
       <p class="card-description">Paste your download link above to get started.</p>
     </div>
 
@@ -63,26 +59,24 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { ElMessage } from "element-plus";
-
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 // 下载链接和方式
 const downloadLink = ref("");
 const downloadMethod = ref("left");
 
+const total_count = ref(1);
 // 下载进度
 const downloadProgress = ref(0); // 进度值（0-100）
 const isDownloading = ref(false); // 是否正在下载
 
-
-
-
 // 处理下载逻辑
 async function handleDownload() {
   if (!downloadLink.value) {
-    ElMessage.warning("Please enter a download link."); // 提示用户输入下载链接
+    ElMessage.error("Please enter a download link."); // 提示用户输入下载链接
     return;
   }
 
-  isDownloading.value = true; // 开始下载
   downloadProgress.value = 0; // 重置进度
 
   try {
@@ -92,8 +86,6 @@ async function handleDownload() {
     } else {
       await download_all_songs(downloadLink.value); // 调用下载全部歌曲函数
     }
-
-    ElMessage.success("Download complete!"); // 下载完成提示
   } catch (error) {
     console.error("Download failed:", error);
     ElMessage.error("Download failed. Please try again."); // 下载失败提示
@@ -102,29 +94,43 @@ async function handleDownload() {
   }
 }
 
-
-async function download_single_song(link: string) {
-  // 调用后端 API 下载单曲
-
+async function download_single_song(link: string, cookie?: string) {
+  try {
+    // 调用后端 API 下载单曲
+    await invoke("download_single_song", { url: link, cookie: cookie });
+  } catch (error) {
+    console.error("Error downloading song:", error);
+  }
 }
 
-async function download_all_songs(link: string) {
-  // 调用后端 API 下载全部歌曲
-
+async function download_all_songs(link: string, cookie?: string) {
+  try {
+    // 调用后端 API 下载全部歌曲
+    await invoke("download_all_songs", { url: link, cookie: cookie });
+  } catch (error) {
+    console.error("Error downloading songs:", error);
+    // 这里可以显示错误提示
+  }
 }
+
+// 监听后端发送的事件
+listen("download-started", () => {
+  ElMessage.success("Download start!"); // 下载完成提示
+  isDownloading.value = true;
+});
+listen("download_success", () => {
+  ElMessage.success("Download complete!"); // 下载完成提示
+  isDownloading.value = false;
+});
+listen("download_index", (event: { payload: number }) => {
+  downloadProgress.value = Math.round((event.payload / total_count.value) * 100);
+});
+
+listen("total_count", (event: { payload: number }) => {
+  console.log(`Total songs to download: ${event.payload}`);
+  total_count.value = event.payload;
+});
 </script>
-
-
-
-
-
-
-
-
-
-
-
-
 
 <style scoped>
 .cards {

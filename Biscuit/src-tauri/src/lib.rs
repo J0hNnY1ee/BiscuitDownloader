@@ -55,7 +55,8 @@ pub fn get_html(url: &str, cookie: Option<&str>) -> Result<String, String> {
 }
 
 fn download(filename: &str, url: &str) -> Result<(), String> {
-    let decoded_filename = decode_html_entities(filename).into_owned();
+    let decoded_filename = sanitize_windows_filename(&decode_html_entities(filename).into_owned());
+    
     // Create HTTP client
     let client = Client::new();
     // Send the GET request with streaming enabled
@@ -258,33 +259,7 @@ fn get_songs(uid: &str, cookie: Option<&str>) -> Result<Vec<Value>, Box<dyn Erro
     Ok(song_list)
 }
 
-// fn download_list(
-//     song_list: &[serde_json::Value],
-//     cookie: Option<&str>,
-// ) -> Result<(), Box<dyn Error>> {
-//     for song in song_list.iter() {
-//         let shareid = match song.get("shareid").and_then(|v| v.as_str()) {
-//             Some(id) => id,
-//             None => {
-//                 eprintln!("Missing 'shareid' in song: {:?}", song);
-//                 continue;
-//             }
-//         };
-//         let url = format!("https://node.kg.qq.com/play?s={}", shareid);
-//         let content = get_html(&url, cookie)?;
-//         let (nick_name, song_name, play_url) = extract_data_from_html(&content)?;
 
-//         // 构建文件保存路径
-//         let file_path = format!("downloads/{}/{}-{}.m4a", nick_name, nick_name, song_name);
-
-//         // 下载歌曲
-//         if let Err(err) = download(&file_path, &play_url) {
-//             eprintln!("Failed to download song '{}': {}", song_name, err);
-//         }
-//     }
-
-//     Ok(())
-// }
 
 fn get_uid(url: &str) -> Option<String> {
     // 解析 URL
@@ -301,19 +276,7 @@ fn get_uid(url: &str) -> Option<String> {
     None
 }
 
-// fn download_people(url: &str, cookie: Option<&str>) -> Result<(), Box<dyn Error>> {
-//     let uid = match get_uid(url) {
-//         Some(uid) => uid,
-//         None => {
-//             eprintln!("Missing uid");
-//             return Err(format!("no uid").into());
-//         }
-//     };
 
-//     let songs = get_songs(&uid, cookie.as_deref())?;
-//     download_list(&songs, cookie)?;
-//     Ok(())
-// }
 
 fn download_song(url: &str, cookie: Option<&str>) -> Result<(), Box<dyn Error>> {
     // Get HTML content
@@ -345,14 +308,46 @@ fn download_single_song(app: AppHandle, url: String, cookie: Option<String>) -> 
         app.emit("total_count", 1).unwrap();
         if let Err(e) = download_song(&url, cookie.as_deref()) {
             eprintln!("Error downloading song: {}", e);
-            app.emit("download_index", 1).unwrap();
         } else {
             println!("Download song task completed.");
+            app.emit("download_index", 1).unwrap();
             app.emit("download_success", ()).unwrap();
         }
     });
     Ok(())
 }
+
+
+
+
+
+
+fn sanitize_windows_filename(filename: &str) -> String {
+    // 定义 Windows 文件名中的非法字符
+    const ILLEGAL_CHARS: [char; 9] = ['\\', '/', ':', '*', '?', '"', '<', '>', '|'];
+
+    // 替换非法字符为 '-'
+    let sanitized = filename
+        .chars()
+        .map(|c| if ILLEGAL_CHARS.contains(&c) { '-' } else { c })
+        .collect::<String>();
+
+    // 去除文件名末尾的空格和句点
+    let sanitized = sanitized.trim_end_matches(|c: char| c == ' ' || c == '.');
+
+    // 限制文件名长度（Windows 路径最大长度为 260 字符）
+    const MAX_FILENAME_LENGTH: usize = 255; // 预留空间给路径
+    let sanitized = if sanitized.len() > MAX_FILENAME_LENGTH {
+        let mut truncated = sanitized.chars().take(MAX_FILENAME_LENGTH).collect::<String>();
+        // 确保截断后的文件名不以空格或句点结尾
+        truncated.trim_end_matches(|c: char| c == ' ' || c == '.').to_string()
+    } else {
+        sanitized.to_string()
+    };
+
+    sanitized
+}
+
 
 #[tauri::command]
 fn download_all_songs(app: AppHandle, url: String, cookie: Option<String>) -> Result<(), String> {
